@@ -90,8 +90,8 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
     const minuteNumbers = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
     minuteNumbers.forEach((num, i) => {
       const angle = (i * 30 - 90) * (Math.PI / 180);
-      const x = centerX + (radius + 40) * Math.cos(angle);
-      const y = centerY + (radius + 40) * Math.sin(angle);
+      const x = centerX + (radius + 30) * Math.cos(angle);
+      const y = centerY + (radius + 30) * Math.sin(angle);
       ctx.fillText(num.toString(), x, y);
     });
 
@@ -241,11 +241,11 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
   }, [currentTime, drawClock]);
 
   return (
-    <div className="clock-container w-80 h-80 md:w-96 md:h-96">
+    <div className="clock-container w-96 h-96 md:w-[28rem] md:h-[28rem]">
       <canvas
         ref={canvasRef}
-        width={384}
-        height={384}
+        width={480}
+        height={480}
         className="w-full h-full"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
