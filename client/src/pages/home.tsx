@@ -102,6 +102,15 @@ export default function Home() {
             <div className="text-lg text-muted-foreground mt-2" data-testid="current-time-korean">
               {formatTimeKorean(currentTime, is24Hour)}
             </div>
+            {manualTime && (
+              <Button
+                className="w-full bg-primary text-primary-foreground py-2 rounded-xl font-bold hover:bg-primary/90 transition-colors mt-4"
+                onClick={() => setManualTime(null)}
+                data-testid="reset-to-current-time-button"
+              >
+                🕐 현재 시각으로 돌아가기
+              </Button>
+            )}
           </div>
         </div>
 
