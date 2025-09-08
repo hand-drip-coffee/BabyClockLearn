@@ -83,15 +83,15 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
 
     // Draw minute/second numbers (outside)
     ctx.fillStyle = '#3b82f6';
-    ctx.font = 'bold 20px Inter';
+    ctx.font = 'bold 40px Inter';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     const minuteNumbers = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
     minuteNumbers.forEach((num, i) => {
       const angle = (i * 30 - 90) * (Math.PI / 180);
-      const x = centerX + (radius + 25) * Math.cos(angle);
-      const y = centerY + (radius + 25) * Math.sin(angle);
+      const x = centerX + (radius + 40) * Math.cos(angle);
+      const y = centerY + (radius + 40) * Math.sin(angle);
       ctx.fillText(num.toString(), x, y);
     });
 
