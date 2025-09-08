@@ -76,7 +76,7 @@ export function formatTimeToKorean(time: Date, is24Hour: boolean = false): strin
   const period = is24Hour ? '' : (hours >= 12 ? '오후 ' : '오전 ');
   const displayHours = is24Hour ? hours : (hours % 12 || 12);
   
-  const hourText = convertNumberToKorean(displayHours);
+  const hourText = convertHourToKoreanOrdinal(displayHours);
   const minuteText = convertNumberToKorean(minutes);
   const secondText = convertNumberToKorean(seconds);
   
@@ -95,4 +95,35 @@ export function convertNumberToKorean(num: number): string {
     return tens[tenDigit] + (oneDigit > 0 ? ones[oneDigit] : '');
   }
   return num.toString();
+}
+
+export function convertHourToKoreanOrdinal(num: number): string {
+  const hourOrdinals = {
+    1: '한',
+    2: '두',
+    3: '세',
+    4: '네',
+    5: '다섯',
+    6: '여섯',
+    7: '일곱',
+    8: '여덟',
+    9: '아홉',
+    10: '열',
+    11: '열한',
+    12: '열두',
+    13: '열세',
+    14: '열네',
+    15: '열다섯',
+    16: '열여섯',
+    17: '열일곱',
+    18: '열여덟',
+    19: '열아홉',
+    20: '스무',
+    21: '스물한',
+    22: '스물두',
+    23: '스물세',
+    24: '스물네'
+  };
+  
+  return hourOrdinals[num as keyof typeof hourOrdinals] || num.toString();
 }
