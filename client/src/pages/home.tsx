@@ -31,7 +31,10 @@ export default function Home() {
     const period = use24Hour ? '' : (hours >= 12 ? '오후 ' : '오전 ');
     const displayHours = use24Hour ? hours : (hours % 12 || 12);
     
-    const hourText = convertHourToKoreanOrdinal(displayHours);
+    // 24시간 형식에서 13~24시는 기수, 1~12시는 서수 사용
+    const hourText = use24Hour && displayHours >= 13 
+      ? convertNumberToKorean(displayHours) 
+      : convertHourToKoreanOrdinal(displayHours);
     const minuteText = convertNumberToKorean(minutes);
     const secondText = convertNumberToKorean(seconds);
     
