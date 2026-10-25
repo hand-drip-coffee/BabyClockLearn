@@ -11,6 +11,8 @@ export default function VoiceControl({ currentTime, is24Hour, formatTimeKorean }
   const { speak, isSpeaking } = useSpeech();
 
   const handleSpeak = () => {
+    // Not disabled while speaking, so the button keeps its color and speaking animation
+    if (isSpeaking) return;
     const text = formatTimeKorean(currentTime, is24Hour);
     speak(text);
   };
@@ -23,12 +25,12 @@ export default function VoiceControl({ currentTime, is24Hour, formatTimeKorean }
       <Button
         className={`voice-button w-full py-6 rounded-2xl text-white font-bold text-xl shadow-lg ${isSpeaking ? 'speaking' : ''}`}
         onClick={handleSpeak}
-        disabled={isSpeaking}
+        aria-busy={isSpeaking}
         data-testid="speak-time-button"
       >
         {isSpeaking ? '말하는 중...' : '시간 말하기'}
       </Button>
-      <div className="mt-4 text-sm text-muted-foreground text-center">
+      <div className="mt-4 text-base text-muted-foreground text-center">
         버튼을 눌러 현재 시간을 들어보세요
       </div>
     </div>

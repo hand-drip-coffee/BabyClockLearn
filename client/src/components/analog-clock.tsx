@@ -19,7 +19,7 @@ const HIT_DISTANCE = 36;
 // Hand lengths keep the tip grips off the hour numbers (centered at RADIUS - 50):
 // the hour grip stays inside the numbers, the minute and second grips sit on the tick ring
 const HANDS: Record<Hand, { label: string; color: string; length: number; width: number; knob: number }> = {
-  hour: { label: '시침', color: '#3b82f6', length: 0.45, width: 10, knob: 10 },
+  hour: { label: '시침', color: '#2563eb', length: 0.45, width: 10, knob: 10 },
   minute: { label: '분침', color: '#059669', length: 0.88, width: 7, knob: 9 },
   second: { label: '초침', color: '#ea580c', length: 0.95, width: 3, knob: 6 },
 };
@@ -126,7 +126,7 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
 
     // Draw hour numbers (inside)
     ctx.fillStyle = '#334155';
-    ctx.font = 'bold 32px Inter';
+    ctx.font = 'bold 32px "Pretendard Variable", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -139,8 +139,8 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
     });
 
     // Draw minute/second numbers (outside)
-    ctx.fillStyle = '#3b82f6';
-    ctx.font = 'bold 20px Inter';
+    ctx.fillStyle = '#2563eb';
+    ctx.font = 'bold 20px "Pretendard Variable", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -311,9 +311,21 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
     canvas.style.cursor = 'grab';
   };
 
+  // The canvas doesn't redraw by itself when the web font finishes loading (e.g. while the time is set by hand)
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    document.fonts.ready.then(() => {
+      if (!cancelled) setFontsLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     drawClock(currentTime);
-  }, [currentTime, drawClock]);
+  }, [currentTime, drawClock, fontsLoaded]);
 
   return (
     <div className="flex flex-col items-center gap-4 w-full">
@@ -355,7 +367,7 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
           );
         })}
       </div>
-      <p className="text-sm text-muted-foreground text-center" data-testid="clock-drag-hint">
+      <p className="text-base font-semibold text-muted-foreground text-center" data-testid="clock-drag-hint">
         {highlighted
           ? `${HANDS[highlighted].label}을 움직이고 있어요`
           : '바늘 끝의 동그라미를 잡고 돌려보세요'}

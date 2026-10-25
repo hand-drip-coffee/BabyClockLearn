@@ -113,17 +113,28 @@ export default function Home() {
             <h3 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
               ⏰ 시간 형식
             </h3>
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-lg">12시간</span>
-              <Button
-                variant="ghost"
-                className={`toggle-switch ${is24Hour ? 'active' : ''}`}
-                onClick={() => setIs24Hour(!is24Hour)}
-                data-testid="toggle-time-format"
-              >
-                <div className="toggle-slider"></div>
-              </Button>
-              <span className="font-semibold text-lg">24시간</span>
+            {/* Two-option picker: the selected format is filled, with an example of how 3 PM looks */}
+            <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="시간 형식" data-testid="toggle-time-format">
+              {[
+                { value: false, label: '12시간', example: '오후 3:00' },
+                { value: true, label: '24시간', example: '15:00' },
+              ].map(({ value, label, example }) => {
+                const isSelected = is24Hour === value;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    onClick={() => setIs24Hour(value)}
+                    className={`time-format-option ${isSelected ? 'selected' : ''}`}
+                    data-testid={`time-format-${value ? '24' : '12'}`}
+                  >
+                    <span className="text-xl font-black">{isSelected ? '✓ ' : ''}{label}</span>
+                    <span className="text-sm font-semibold opacity-90">{example}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -136,19 +147,26 @@ export default function Home() {
             <div className="text-3xl font-black text-primary" data-testid="current-time-display">
               {formatTime(manualTime || currentTime, is24Hour)}
             </div>
-            <div className="text-lg text-muted-foreground mt-2" data-testid="current-time-korean">
+            <div className="text-xl font-bold text-foreground mt-2" data-testid="current-time-korean">
               {formatTimeKorean(manualTime || currentTime, is24Hour)}
             </div>
-            {/* Always rendered so its space is reserved; showing it mid-drag would push the clock down under the finger */}
-            <Button
-              className={`w-full bg-primary text-primary-foreground py-2 rounded-xl font-bold hover:bg-primary/90 transition-colors mt-4 ${manualTime ? '' : 'invisible'}`}
-              onClick={() => setManualTime(null)}
-              aria-hidden={!manualTime}
-              tabIndex={manualTime ? 0 : -1}
-              data-testid="reset-to-current-time-button"
-            >
-              🕐 현재 시각으로 돌아가기
-            </Button>
+            {/* Button and hint share the same height (h-10) so swapping them mid-drag doesn't push the clock down under the finger */}
+            {manualTime ? (
+              <Button
+                className="w-full bg-primary text-primary-foreground py-2 rounded-xl font-bold hover:bg-primary/90 transition-colors mt-4"
+                onClick={() => setManualTime(null)}
+                data-testid="reset-to-current-time-button"
+              >
+                🕐 현재 시각으로 돌아가기
+              </Button>
+            ) : (
+              <p
+                className="mt-4 h-10 flex items-center justify-center rounded-xl bg-muted text-base font-semibold text-muted-foreground"
+                data-testid="time-display-hint"
+              >
+                💡 바늘을 움직이면 시간이 바뀌어요
+              </p>
+            )}
           </div>
         </div>
 
@@ -182,22 +200,22 @@ export default function Home() {
           <div className="text-center">
             <div className="text-4xl mb-3">👆</div>
             <h3 className="font-bold text-lg mb-2">바늘 움직이기</h3>
-            <p className="text-muted-foreground">시침, 분침, 초침을 드래그해서 시간을 바꿔보세요</p>
+            <p className="text-base font-medium text-muted-foreground">시침, 분침, 초침을 드래그해서 시간을 바꿔보세요</p>
           </div>
           <div className="text-center">
             <div className="text-4xl mb-3">🔊</div>
             <h3 className="font-bold text-lg mb-2">소리로 듣기</h3>
-            <p className="text-muted-foreground">버튼을 눌러 시간을 소리로 들어보세요</p>
+            <p className="text-base font-medium text-muted-foreground">버튼을 눌러 시간을 소리로 들어보세요</p>
           </div>
           <div className="text-center">
             <div className="text-4xl mb-3">⚙️</div>
             <h3 className="font-bold text-lg mb-2">설정 바꾸기</h3>
-            <p className="text-muted-foreground">12시간과 24시간 중에 선택할 수 있어요</p>
+            <p className="text-base font-medium text-muted-foreground">12시간과 24시간 중에 선택할 수 있어요</p>
           </div>
           <div className="text-center">
             <div className="text-4xl mb-3">🧮</div>
             <h3 className="font-bold text-lg mb-2">시간 계산</h3>
-            <p className="text-muted-foreground">남은 시간과 지난 시간을 계산해보세요</p>
+            <p className="text-base font-medium text-muted-foreground">남은 시간과 지난 시간을 계산해보세요</p>
           </div>
         </div>
       </div>

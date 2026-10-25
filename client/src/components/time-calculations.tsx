@@ -112,7 +112,7 @@ export default function TimeCalculations({
         <h3 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
           ✋ 시간 맞추기
         </h3>
-        <p className="text-muted-foreground mb-3 text-center">
+        <p className="text-lg font-semibold text-muted-foreground mb-3 text-center">
           시계 바늘을 드래그해서<br />시간을 바꿔보세요!
         </p>
         <div className="bg-primary/10 border-2 border-primary/20 rounded-xl p-4">
