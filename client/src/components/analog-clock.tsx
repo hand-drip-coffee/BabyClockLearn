@@ -246,24 +246,24 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
   };
 
   const updateTimeFromAngle = (hand: Hand, angle: number) => {
-    const newTime = new Date(currentTime);
     // atan2 gives -180..180 with 0 at 3 o'clock; convert to 0..360 clockwise from 12 o'clock
     const clockAngle = (angle + 90 + 360) % 360;
 
-    if (hand === 'hour') {
-      const hours = Math.floor(clockAngle / 30) % 12;
-      const currentHours = newTime.getHours();
-      const isPM = currentHours >= 12;
-      newTime.setHours(isPM ? hours + 12 : hours);
-    } else if (hand === 'minute') {
-      const minutes = Math.floor(clockAngle / 6) % 60;
-      newTime.setMinutes(minutes);
-    } else if (hand === 'second') {
-      const seconds = Math.floor(clockAngle / 6) % 60;
-      newTime.setSeconds(seconds);
-    }
+    const units = {
+      hour: { steps: 12, ms: 60 * 60 * 1000, current: currentTime.getHours() % 12 },
+      minute: { steps: 60, ms: 60 * 1000, current: currentTime.getMinutes() },
+      second: { steps: 60, ms: 1000, current: currentTime.getSeconds() },
+    };
+    const { steps, ms, current } = units[hand];
+    const target = Math.floor(clockAngle / (360 / steps)) % steps;
 
-    onTimeChange(newTime);
+    // Move by the shortest way around the dial, so passing 12 o'clock carries over like a real clock:
+    // minute 59 -> 0 adds an hour, second 59 -> 0 adds a minute, hour 11 -> 12 switches AM/PM (and back when reversing)
+    let delta = target - current;
+    if (delta > steps / 2) delta -= steps;
+    if (delta < -steps / 2) delta += steps;
+
+    onTimeChange(new Date(currentTime.getTime() + delta * ms));
   };
 
   // Pointer events handle mouse, touch and pen alike
