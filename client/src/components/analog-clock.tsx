@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 
 interface AnalogClockProps {
   currentTime: Date;
@@ -6,9 +6,57 @@ interface AnalogClockProps {
   isSpeaking: boolean;
 }
 
+type Hand = 'hour' | 'minute' | 'second';
+
+// Logical canvas size; the backing store is scaled by devicePixelRatio for sharp rendering
+const SIZE = 384;
+const CENTER = SIZE / 2;
+const RADIUS = CENTER - 40; // leave room for the outer minute numbers
+
+// Max distance (canvas px) between a touch point and a hand for it to be picked up
+const HIT_DISTANCE = 36;
+
+const HANDS: Record<Hand, { label: string; color: string; length: number; width: number; knob: number }> = {
+  hour: { label: '시침', color: '#3b82f6', length: 0.5, width: 10, knob: 10 },
+  minute: { label: '분침', color: '#059669', length: 0.8, width: 7, knob: 9 },
+  second: { label: '초침', color: '#ea580c', length: 0.85, width: 3, knob: 7 },
+};
+
+const HAND_ORDER: Hand[] = ['hour', 'minute', 'second'];
+
+function getHandAngles(time: Date): Record<Hand, number> {
+  const hours = time.getHours() % 12;
+  const minutes = time.getMinutes();
+  const seconds = time.getSeconds();
+
+  return {
+    hour: (hours * 30 + minutes * 0.5 - 90) * (Math.PI / 180),
+    minute: (minutes * 6 - 90) * (Math.PI / 180),
+    second: (seconds * 6 - 90) * (Math.PI / 180),
+  };
+}
+
+function getHandTip(hand: Hand, angle: number) {
+  const length = RADIUS * HANDS[hand].length;
+  return {
+    x: CENTER + length * Math.cos(angle),
+    y: CENTER + length * Math.sin(angle),
+  };
+}
+
+function distanceToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
 export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: AnalogClockProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const isDragging = useRef<{ hand: string; offset: number } | null>(null);
+  const isDragging = useRef<Hand | null>(null);
+  const [activeHand, setActiveHand] = useState<Hand | null>(null);
+  const [hoverHand, setHoverHand] = useState<Hand | null>(null);
+  const highlighted = activeHand ?? hoverHand;
 
   const drawClock = useCallback((time: Date) => {
     const canvas = canvasRef.current;
@@ -17,12 +65,19 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = Math.min(centerX, centerY) - 40; // leave room for the outer minute numbers
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== SIZE * dpr) {
+      canvas.width = SIZE * dpr;
+      canvas.height = SIZE * dpr;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const centerX = CENTER;
+    const centerY = CENTER;
+    const radius = RADIUS;
 
     // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, SIZE, SIZE);
 
     // Draw clock face
     ctx.beginPath();
@@ -95,51 +150,56 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
       ctx.fillText(num.toString(), x, y);
     });
 
-    // Calculate hand angles
-    const hours = time.getHours() % 12;
-    const minutes = time.getMinutes();
-    const seconds = time.getSeconds();
+    const angles = getHandAngles(time);
 
-    const hourAngle = (hours * 30 + minutes * 0.5 - 90) * (Math.PI / 180);
-    const minuteAngle = (minutes * 6 - 90) * (Math.PI / 180);
-    const secondAngle = (seconds * 6 - 90) * (Math.PI / 180);
+    const drawHand = (hand: Hand) => {
+      const { color, width, knob } = HANDS[hand];
+      const tip = getHandTip(hand, angles[hand]);
+      const isHighlighted = hand === highlighted;
+      // Dim the other hands while one is being dragged so the selected one stands out
+      const isDimmed = activeHand !== null && !isHighlighted;
 
-    // Draw hour hand
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(
-      centerX + (radius * 0.5) * Math.cos(hourAngle),
-      centerY + (radius * 0.5) * Math.sin(hourAngle)
-    );
-    ctx.strokeStyle = '#3b82f6';
-    ctx.lineWidth = 8;
-    ctx.lineCap = 'round';
-    ctx.stroke();
+      ctx.save();
+      ctx.globalAlpha = isDimmed ? 0.3 : 1;
 
-    // Draw minute hand
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.lineTo(
-      centerX + (radius * 0.7) * Math.cos(minuteAngle),
-      centerY + (radius * 0.7) * Math.sin(minuteAngle)
-    );
-    ctx.strokeStyle = '#059669';
-    ctx.lineWidth = 6;
-    ctx.lineCap = 'round';
-    ctx.stroke();
+      // Soft halo behind the selected hand
+      if (isHighlighted) {
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(tip.x, tip.y);
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.25;
+        ctx.lineWidth = width + 16;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
 
-    // Draw second hand (only if not speaking)
-    if (!isSpeaking) {
       ctx.beginPath();
       ctx.moveTo(centerX, centerY);
-      ctx.lineTo(
-        centerX + (radius * 0.8) * Math.cos(secondAngle),
-        centerY + (radius * 0.8) * Math.sin(secondAngle)
-      );
-      ctx.strokeStyle = '#ea580c';
-      ctx.lineWidth = 2;
+      ctx.lineTo(tip.x, tip.y);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = isHighlighted ? width + 3 : width;
       ctx.lineCap = 'round';
       ctx.stroke();
+
+      // Round grip at the tip shows where to grab the hand
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, isHighlighted ? knob + 5 : knob, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.restore();
+    };
+
+    // Draw the highlighted hand last so it sits on top
+    const visibleHands = HAND_ORDER.filter((hand) => hand !== 'second' || !isSpeaking);
+    visibleHands.filter((hand) => hand !== highlighted).forEach(drawHand);
+    if (highlighted && visibleHands.includes(highlighted)) {
+      drawHand(highlighted);
     }
 
     // Draw center dot
@@ -150,40 +210,57 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 4;
     ctx.stroke();
-  }, [isSpeaking]);
+  }, [isSpeaking, activeHand, highlighted]);
 
-  const getHandFromPosition = (x: number, y: number, canvas: HTMLCanvasElement) => {
+  const toCanvasPoint = (clientX: number, clientY: number, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const clickX = (x - rect.left) * (canvas.width / rect.width);
-    const clickY = (y - rect.top) * (canvas.height / rect.height);
-    
-    const distance = Math.sqrt((clickX - centerX) ** 2 + (clickY - centerY) ** 2);
-    const radius = Math.min(centerX, centerY) - 40; // leave room for the outer minute numbers
-    
-    if (distance > radius * 0.8) return 'second';
-    if (distance > radius * 0.7) return 'minute';
-    if (distance > radius * 0.5) return 'hour';
-    return null;
+    return {
+      x: (clientX - rect.left) * (SIZE / rect.width),
+      y: (clientY - rect.top) * (SIZE / rect.height),
+    };
   };
 
-  const updateTimeFromAngle = (hand: string, angle: number) => {
+  // Pick the hand closest to the touch point, so any part of a hand can be grabbed
+  const getHandFromPosition = (clientX: number, clientY: number, canvas: HTMLCanvasElement): Hand | null => {
+    const { x, y } = toCanvasPoint(clientX, clientY, canvas);
+    // All hands meet at the center, so touches there are ambiguous
+    if (Math.hypot(x - CENTER, y - CENTER) < 20) return null;
+
+    const angles = getHandAngles(currentTime);
+    let closest: Hand | null = null;
+    let closestDistance = HIT_DISTANCE;
+
+    for (const hand of HAND_ORDER) {
+      if (hand === 'second' && isSpeaking) continue;
+      const tip = getHandTip(hand, angles[hand]);
+      const distance = distanceToSegment(x, y, CENTER, CENTER, tip.x, tip.y);
+      if (distance < closestDistance) {
+        closest = hand;
+        closestDistance = distance;
+      }
+    }
+
+    return closest;
+  };
+
+  const updateTimeFromAngle = (hand: Hand, angle: number) => {
     const newTime = new Date(currentTime);
-    
+    // atan2 gives -180..180 with 0 at 3 o'clock; convert to 0..360 clockwise from 12 o'clock
+    const clockAngle = (angle + 90 + 360) % 360;
+
     if (hand === 'hour') {
-      const hours = Math.floor((angle + 90) / 30) % 12;
+      const hours = Math.floor(clockAngle / 30) % 12;
       const currentHours = newTime.getHours();
       const isPM = currentHours >= 12;
       newTime.setHours(isPM ? hours + 12 : hours);
     } else if (hand === 'minute') {
-      const minutes = Math.floor((angle + 90) / 6) % 60;
+      const minutes = Math.floor(clockAngle / 6) % 60;
       newTime.setMinutes(minutes);
     } else if (hand === 'second') {
-      const seconds = Math.floor((angle + 90) / 6) % 60;
+      const seconds = Math.floor(clockAngle / 6) % 60;
       newTime.setSeconds(seconds);
     }
-    
+
     onTimeChange(newTime);
   };
 
@@ -197,7 +274,8 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
 
     // Keep receiving moves even if the finger slides off the canvas
     canvas.setPointerCapture(e.pointerId);
-    isDragging.current = { hand, offset: 0 };
+    isDragging.current = hand;
+    setActiveHand(hand);
     canvas.style.cursor = 'grabbing';
   };
 
@@ -208,19 +286,15 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
     if (!isDragging.current) {
       if (e.pointerType === 'mouse') {
         const hand = getHandFromPosition(e.clientX, e.clientY, canvas);
+        setHoverHand(hand);
         canvas.style.cursor = hand ? 'grab' : 'default';
       }
       return;
     }
 
-    const rect = canvas.getBoundingClientRect();
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
-    const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
-    
-    const angle = Math.atan2(clickY - centerY, clickX - centerX) * (180 / Math.PI);
-    updateTimeFromAngle(isDragging.current.hand, angle);
+    const { x, y } = toCanvasPoint(e.clientX, e.clientY, canvas);
+    const angle = Math.atan2(y - CENTER, x - CENTER) * (180 / Math.PI);
+    updateTimeFromAngle(isDragging.current, angle);
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -231,6 +305,7 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
       canvas.releasePointerCapture(e.pointerId);
     }
     isDragging.current = null;
+    setActiveHand(null);
     canvas.style.cursor = 'grab';
   };
 
@@ -239,18 +314,50 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
   }, [currentTime, drawClock]);
 
   return (
-    <div className="clock-container w-80 max-w-full aspect-square md:w-96">
-      <canvas
-        ref={canvasRef}
-        width={384}
-        height={384}
-        className="w-full h-full touch-none select-none"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        data-testid="analog-clock"
-      />
+    <div className="flex flex-col items-center gap-4 w-full">
+      <div className="clock-container w-96 max-w-full aspect-square">
+        <canvas
+          ref={canvasRef}
+          width={SIZE}
+          height={SIZE}
+          className="w-full h-full touch-none select-none"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onPointerLeave={() => setHoverHand(null)}
+          data-testid="analog-clock"
+        />
+      </div>
+
+      {/* Legend: which color is which hand, and which one is currently selected */}
+      <div className="flex gap-2" data-testid="clock-hand-legend">
+        {HAND_ORDER.map((hand) => {
+          const { label, color } = HANDS[hand];
+          const isSelected = hand === highlighted;
+          return (
+            <div
+              key={hand}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border-2 font-bold text-base transition-all ${
+                isSelected ? 'scale-110 text-white shadow-md' : 'bg-white text-foreground'
+              }`}
+              style={{ borderColor: color, backgroundColor: isSelected ? color : undefined }}
+              data-testid={`legend-${hand}`}
+            >
+              <span
+                className="inline-block w-3 h-3 rounded-full"
+                style={{ backgroundColor: isSelected ? '#ffffff' : color }}
+              />
+              {label}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-sm text-muted-foreground text-center" data-testid="clock-drag-hint">
+        {highlighted
+          ? `${HANDS[highlighted].label}을 움직이고 있어요`
+          : '바늘 끝의 동그라미를 잡고 돌려보세요'}
+      </p>
     </div>
   );
 }

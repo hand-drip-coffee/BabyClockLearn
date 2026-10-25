@@ -149,7 +149,8 @@ export default function Home() {
         </div>
 
         {/* Center - Analog Clock */}
-        <div className="lg:order-2 flex justify-center">
+        {/* min-w-0 lets the clock shrink below its intrinsic canvas width on narrow screens */}
+        <div className="lg:order-2 flex justify-center min-w-0">
           <AnalogClock 
             currentTime={manualTime || currentTime}
             onTimeChange={setManualTime}
