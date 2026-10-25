@@ -19,7 +19,7 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
 
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    const radius = Math.min(centerX, centerY) - 10;
+    const radius = Math.min(centerX, centerY) - 40; // leave room for the outer minute numbers
 
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -160,7 +160,7 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
     const clickY = (y - rect.top) * (canvas.height / rect.height);
     
     const distance = Math.sqrt((clickX - centerX) ** 2 + (clickY - centerY) ** 2);
-    const radius = Math.min(centerX, centerY) - 10;
+    const radius = Math.min(centerX, centerY) - 40; // leave room for the outer minute numbers
     
     if (distance > radius * 0.8) return 'second';
     if (distance > radius * 0.7) return 'minute';
@@ -187,28 +187,31 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
     onTimeChange(newTime);
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Pointer events handle mouse, touch and pen alike
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const hand = getHandFromPosition(e.clientX, e.clientY, canvas);
     if (!hand) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const clickX = (e.clientX - rect.left) * (canvas.width / rect.width);
-    const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
-    
-    const angle = Math.atan2(clickY - centerY, clickX - centerX) * (180 / Math.PI);
-    
+    // Keep receiving moves even if the finger slides off the canvas
+    canvas.setPointerCapture(e.pointerId);
     isDragging.current = { hand, offset: 0 };
     canvas.style.cursor = 'grabbing';
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
-    if (!canvas || !isDragging.current) return;
+    if (!canvas) return;
+
+    if (!isDragging.current) {
+      if (e.pointerType === 'mouse') {
+        const hand = getHandFromPosition(e.clientX, e.clientY, canvas);
+        canvas.style.cursor = hand ? 'grab' : 'default';
+      }
+      return;
+    }
 
     const rect = canvas.getBoundingClientRect();
     const centerX = canvas.width / 2;
@@ -220,20 +223,15 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
     updateTimeFromAngle(isDragging.current.hand, angle);
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !isDragging.current) return;
 
+    if (canvas.hasPointerCapture(e.pointerId)) {
+      canvas.releasePointerCapture(e.pointerId);
+    }
     isDragging.current = null;
     canvas.style.cursor = 'grab';
-  };
-
-  const handleMouseEnter = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const hand = getHandFromPosition(e.clientX, e.clientY, canvas);
-    canvas.style.cursor = hand ? 'grab' : 'default';
   };
 
   useEffect(() => {
@@ -241,17 +239,16 @@ export default function AnalogClock({ currentTime, onTimeChange, isSpeaking }: A
   }, [currentTime, drawClock]);
 
   return (
-    <div className="clock-container w-80 h-80 md:w-96 md:h-96">
+    <div className="clock-container w-80 max-w-full aspect-square md:w-96">
       <canvas
         ref={canvasRef}
         width={384}
         height={384}
-        className="w-full h-full"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onMouseEnter={handleMouseEnter}
+        className="w-full h-full touch-none select-none"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         data-testid="analog-clock"
       />
     </div>

@@ -119,8 +119,11 @@
     @apply bg-gradient-to-br from-white to-muted border-2 border-border rounded-3xl transition-all duration-300;
   }
 
-  .feature-card:hover {
-    @apply -translate-y-1 shadow-lg;
+  /* Hover effects only on devices with a real pointer, so they don't stick after a tap */
+  @media (hover: hover) {
+    .feature-card:hover {
+      @apply -translate-y-1 shadow-lg;
+    }
   }
 
   .voice-button {
@@ -128,9 +131,11 @@
     animation: pulse 2s infinite;
   }
 
-  .voice-button:hover {
-    @apply scale-105 shadow-xl;
-    box-shadow: 0 10px 30px hsl(217, 91%, 60%, 0.3);
+  @media (hover: hover) {
+    .voice-button:hover {
+      @apply scale-105 shadow-xl;
+      box-shadow: 0 10px 30px hsl(217, 91%, 60%, 0.3);
+    }
   }
 
   .voice-button.speaking {
