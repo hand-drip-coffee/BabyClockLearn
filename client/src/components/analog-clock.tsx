@@ -16,10 +16,12 @@ const RADIUS = CENTER - 40; // leave room for the outer minute numbers
 // Max distance (canvas px) between a touch point and a hand for it to be picked up
 const HIT_DISTANCE = 36;
 
+// Hand lengths keep the tip grips off the hour numbers (centered at RADIUS - 50):
+// the hour grip stays inside the numbers, the minute and second grips sit on the tick ring
 const HANDS: Record<Hand, { label: string; color: string; length: number; width: number; knob: number }> = {
-  hour: { label: '시침', color: '#3b82f6', length: 0.5, width: 10, knob: 10 },
-  minute: { label: '분침', color: '#059669', length: 0.8, width: 7, knob: 9 },
-  second: { label: '초침', color: '#ea580c', length: 0.85, width: 3, knob: 7 },
+  hour: { label: '시침', color: '#3b82f6', length: 0.45, width: 10, knob: 10 },
+  minute: { label: '분침', color: '#059669', length: 0.88, width: 7, knob: 9 },
+  second: { label: '초침', color: '#ea580c', length: 0.95, width: 3, knob: 6 },
 };
 
 const HAND_ORDER: Hand[] = ['hour', 'minute', 'second'];

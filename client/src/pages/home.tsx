@@ -129,22 +129,26 @@ export default function Home() {
 
           {/* Current Time Display */}
           <div className="time-display p-6">
-            <h3 className="text-xl font-bold text-foreground mb-3">현재 시간</h3>
+            {/* Shows the time set with the clock hands, if any, so it matches the analog clock */}
+            <h3 className="text-xl font-bold text-foreground mb-3" data-testid="time-display-title">
+              {manualTime ? '✋ 바늘로 맞춘 시간' : '현재 시간'}
+            </h3>
             <div className="text-3xl font-black text-primary" data-testid="current-time-display">
-              {formatTime(currentTime, is24Hour)}
+              {formatTime(manualTime || currentTime, is24Hour)}
             </div>
             <div className="text-lg text-muted-foreground mt-2" data-testid="current-time-korean">
-              {formatTimeKorean(currentTime, is24Hour)}
+              {formatTimeKorean(manualTime || currentTime, is24Hour)}
             </div>
-            {manualTime && (
-              <Button
-                className="w-full bg-primary text-primary-foreground py-2 rounded-xl font-bold hover:bg-primary/90 transition-colors mt-4"
-                onClick={() => setManualTime(null)}
-                data-testid="reset-to-current-time-button"
-              >
-                🕐 현재 시각으로 돌아가기
-              </Button>
-            )}
+            {/* Always rendered so its space is reserved; showing it mid-drag would push the clock down under the finger */}
+            <Button
+              className={`w-full bg-primary text-primary-foreground py-2 rounded-xl font-bold hover:bg-primary/90 transition-colors mt-4 ${manualTime ? '' : 'invisible'}`}
+              onClick={() => setManualTime(null)}
+              aria-hidden={!manualTime}
+              tabIndex={manualTime ? 0 : -1}
+              data-testid="reset-to-current-time-button"
+            >
+              🕐 현재 시각으로 돌아가기
+            </Button>
           </div>
         </div>
 
